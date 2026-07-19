@@ -1,0 +1,76 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-faded-blue: #1a2e48;
+  --color-faded-green: #093e23;
+  --color-faded-primary-1: #444446;
+  --color-faded-primary-2: #2e2e31;
+  --color-faded-primary-3: #0a0a0b;
+  --color-faded-red: #471e20;
+  --color-faded-yellow: #453700;
+  --color-primary-1: #fafafa;
+  --color-primary-2: #a1a1aa;
+  --color-primary-3: #27272a;
+  --color-primary-4: #0a0a0b;
+}
+
+html,
+body,
+#popup {
+  @apply m-0 p-0;
+  @apply bg-primary-4 text-primary-1;
+
+  line-height: 1.5;
+  font-family: 'Geist Sans', sans-serif;
+  --webkit-font-smoothing: antialiased;
+  --moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  @apply box-border;
+}
+
+img,
+picture,
+video,
+canvas,
+svg {
+  @apply block max-w-full;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+}
+
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  @apply wrap-break-word;
+}
+
+p {
+  @apply text-pretty;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  @apply text-balance;
+}
+
+#root,
+#__next {
+  @apply isolate;
+}

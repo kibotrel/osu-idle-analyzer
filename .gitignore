@@ -1,7 +1,16 @@
-.DS_Store
-.opencode/
-.vscode/
-*.pem
-*.zip
+# Logs
+*.log
+logs
+
+# Dependencies and artifacts
 builds
-dev/
+dist
+node_modules
+release
+tsconfig.tsbuildinfo
+
+# Editor directories and files
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.opencode

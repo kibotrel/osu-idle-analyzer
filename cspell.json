@@ -1,0 +1,22 @@
+{
+  "dictionaries": [
+    "css",
+    "en_US",
+    "fonts",
+    "fr-fr",
+    "html",
+    "misc",
+    "node",
+    "npm",
+    "osu-idle-analyzer",
+    "softwareTerms",
+    "typescript"
+  ],
+  "dictionaryDefinitions": [
+    { "name": "osu-idle-analyzer", "path": "./cspell/osu-idle-analyzer.dictionary.txt" }
+  ],
+  "enabled": true,
+  "ignorePaths": ["**/node_modules", "**/dist", "pnpm-lock.yaml"],
+  "import": ["@cspell/dict-fr-fr"],
+  "version": "0.2"
+}

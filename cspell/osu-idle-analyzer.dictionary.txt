@@ -1,0 +1,10 @@
+beatmap
+Beatmap
+beatmaps
+geist
+jackspeed
+opencode
+oxfmt
+oxlint
+skillxp
+speedjam
