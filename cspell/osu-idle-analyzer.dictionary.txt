@@ -3,6 +3,7 @@ Beatmap
 beatmaps
 geist
 jackspeed
+kibotrel
 opencode
 oxfmt
 oxlint
