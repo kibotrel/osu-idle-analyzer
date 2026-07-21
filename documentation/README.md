@@ -8,8 +8,8 @@ Reference documentation for **osu-idle-score-extractor**, a Manifest V3 browser 
 
 ## [Coding Conventions](./coding-conventions/README.md)
 
-> DOM API safety patterns, naming conventions, async/messaging patterns, DOM selectors, and service worker constraints.
+> TypeScript + Vue conventions, naming patterns, async/messaging patterns, Tailwind CSS tokens, DOM selectors, and service worker constraints.
 
 ## [Installation & Setup](./installation/README.md)
 
-> How to load the extension unpacked for development, build for distribution, and test it locally.
+> How to set up the dev environment, load the extension unpacked, build for distribution, and run tooling scripts.

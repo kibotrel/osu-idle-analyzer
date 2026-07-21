@@ -44,14 +44,14 @@ A browser extension (Chrome & Firefox) that extracts XP statistics from osu!idle
 ## 🚀 Quick Start
 
 1. Install the extension in [Chrome](https://chromewebstore.google.com/detail/osuidle-score-extractor/beifeckgfnepjdmolmbljbjfcenoibbo) or [Firefox](https://addons.mozilla.org/en-US/firefox/addon/osu-idle-score-extractor/)
-2. Navigate to an osu!idle result page
+2. Navigate to an osu!idle score result page
 3. Click the extension icon to open the popup
-4. Click **Extract** to parse the result
-5. Data is automatically copied to clipboard in full format
+4. Click **Extract** to parse the data
+5. Click **Copy to clipboard** to copy the tab-separated data for spreadsheet import
 
 **Setting up your character profile (optional):**
 
-1. Click the gear icon (⚙) in the popup header to open Settings
+1. Click the gear icon (⚙) in the sidebar to open Settings
 2. Enter your osu!idle character ID in the input field
 3. Your character name, avatar, global level, and per-skill progress are loaded automatically and cached for subsequent opens
 
@@ -60,15 +60,16 @@ See [Installation & Setup](./documentation/installation/README.md) for detailed 
 ## 📁 Project Structure
 
 ```
-├── content/content.js          # Data extraction and formatting logic
-├── popup/
-│   ├── popup.html              # Extension UI markup
-│   ├── popup.js                # UI interaction handling
-│   └── popup.css               # Styling
-├── background/background.js    # Service worker for clipboard fallback
-├── icons/                      # Extension icons (16, 32, 192, 512 px)
-├── build.sh                    # Build script for Chrome + Firefox distributions
-└── manifest.json               # Browser-agnostic Manifest V3 configuration
+├── src/
+│   ├── background/             # Service worker — API fetch + clipboard fallback
+│   ├── content/                # Content script — DOM extraction + IndexedDB queries
+│   ├── popup/                  # Vue 3 popup UI (tabs: Score Extractor, Settings)
+│   ├── shared/                 # Types, constants, methods, and components shared across contexts
+│   └── assets/style.css        # Global Tailwind v4 stylesheet + color tokens
+├── public/                     # Extension icons (16, 32, 48, 128 px)
+├── manifest.config.ts          # Browser-agnostic MV3 manifest (read by Vite)
+├── vite.config.ts              # Vite + crxjs + Vue + Tailwind build config
+└── package.json                # pnpm project manifest
 ```
 
 See [documentation/](./documentation/README.md) for detailed technical documentation.

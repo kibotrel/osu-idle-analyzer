@@ -6,127 +6,172 @@ Overview of the osu-idle-score-extractor extension architecture.
 
 ```
 osu-idle-score-extractor/
-├── manifest.json                  # Browser-agnostic Manifest V3 manifest
-├── build.sh                       # Build script producing Chrome + Firefox zips
-├── content/
-│   └── content.js                 # Content script — DOM extraction + IndexedDB queries
-├── popup/
-│   ├── popup.html                 # Popup HTML structure
-│   ├── popup.js                   # Popup UI logic and event handlers
-│   └── popup.css                  # Popup styling (dark theme)
-├── background/
-│   └── background.js              # Background service worker — clipboard fallback
-├── icons/                         # Extension icons (16, 32, 192, 512 px)
-├── builds/                        # Build output (zip files, gitignored)
+├── manifest.config.ts             # Browser-agnostic Manifest V3 config (read by Vite)
+├── vite.config.ts                 # Vite + crxjs + Vue + Tailwind build config
+├── package.json                   # pnpm project manifest
+├── src/
+│   ├── assets/
+│   │   └── style.css              # Global Tailwind v4 stylesheet + @theme tokens
+│   ├── background/
+│   │   ├── main.ts                # Background service worker entry — message router
+│   │   └── handlers/
+│   │       ├── copyTocClipboard.handler.ts   # Clipboard write via scripting API
+│   │       └── fetchCharacter.handler.ts     # osu!idle character API fetch + storage
+│   ├── content/
+│   │   ├── main.ts                # Content script entry — message router
+│   │   └── handlers/
+│   │       └── extractScoreData.handler.ts   # DOM extraction + IndexedDB queries
+│   ├── popup/
+│   │   ├── index.html             # Popup HTML shell (mounts #popup)
+│   │   ├── main.ts                # Vue app bootstrap
+│   │   ├── Popup.page.vue         # Root popup component with sidebar + tab routing
+│   │   └── tabs/
+│   │       ├── score-extractor/   # Score Extractor tab (components + composable)
+│   │       └── settings/          # Settings tab (components + composable)
+│   └── shared/
+│       ├── components/            # Reusable base UI components (Vue) + icon components
+│       ├── constants/             # Typed constant objects (API, data, design system, etc.)
+│       ├── methods/               # Pure utility functions (gameplay, math, internal)
+│       └── types/                 # TypeScript interfaces and type aliases
+├── public/                        # Static extension icons (16, 32, 48, 128 px)
+├── dist/                          # Vite build output (loaded unpacked during development)
+├── release/                       # Zip output from vite-plugin-zip-pack
 └── documentation/                 # This folder
 ```
 
 ## Component Roles
 
-| **Component**   | **Context**           | **Responsibilities**                                                                                                            |
-| --------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `content.js`    | osu.idle page         | Extracts DOM data (map metadata, skill XP), queries IndexedDB for beatmap data                                                  |
-| `popup.js`      | Extension popup       | Sends extraction request, receives result, renders UI (beatmap card + skill cards); manages settings view and character profile |
-| `popup.html`    | Extension popup       | Static HTML shell with two views: main (extraction) and settings (character profile); dynamic content injected by `popup.js`    |
-| `popup.css`     | Extension popup       | Dark theme, background image layering, skill card grid layout, settings panel and character card styles                         |
-| `background.js` | Service worker        | Handles clipboard write fallback; fetches character data from osu!idle API and persists it to `chrome.storage.local`            |
-| `manifest.json` | Browser runtime (MV3) | Declares permissions, content script rules, popup, icons; browser-specific fields injected at build time                        |
+| **Component**                 | **Context**     | **Responsibilities**                                                                                                                     |
+| ----------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `background/main.ts`          | Service worker  | Routes incoming messages to the appropriate handler                                                                                      |
+| `background/handlers/`        | Service worker  | `fetchCharacter` — fetches osu!idle character API and persists to `chrome.storage.local`; `copyTocClipboard` — clipboard write fallback  |
+| `content/main.ts`             | osu!idle page   | Routes incoming messages to the appropriate handler                                                                                      |
+| `content/handlers/`           | osu!idle page   | `extractScoreData` — DOM extraction, IndexedDB queries, score persistence to `chrome.storage.local`                                      |
+| `popup/Popup.page.vue`        | Extension popup | Root component; renders sidebar navigation and routes to the active tab                                                                  |
+| `popup/tabs/score-extractor/` | Extension popup | Score Extractor tab — triggers extraction, displays beatmap card + skill cards, handles clipboard copy                                   |
+| `popup/tabs/settings/`        | Extension popup | Settings tab — displays character card (avatar, name, level) + per-skill progress bars; allows character ID input                        |
+| `shared/components/`          | Popup (Vue)     | Reusable base components (`Button`, `Input`, `ProgressBar`, `Sidebar`, etc.) and icon components                                         |
+| `shared/constants/`           | All contexts    | Typed constant objects for API endpoints, data defaults, design system tokens, and message names                                         |
+| `shared/methods/`             | All contexts    | Pure utility functions: `gameplay.methods.ts` (XP curve), `maths.methods.ts` (Bezier, duration, rates), `internal.methods.ts` (blob→URL) |
+| `shared/types/`               | All contexts    | TypeScript interfaces and type aliases shared across content, popup, and background                                                      |
+| `manifest.config.ts`          | Build time      | Declares MV3 manifest fields; version and metadata read from `package.json`                                                              |
 
 ## Messaging Protocol
 
-All communication between layers uses the Manifest V3 `chrome.runtime` messaging (compatible with both Chrome and Firefox):
+All cross-context communication uses MV3 `chrome.runtime` messaging. Messages follow a `{ name, data }` shape with names drawn from typed constants.
 
-```javascript
-// popup.js → content.js - Extract score data from DOM on score page
-chrome.tabs.sendMessage(tabId, { type: 'EXTRACT_DATA' }, callback);
-
-// content.js listener
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'EXTRACT_DATA') {
-    extractAll().then(sendResponse);
-
-    return true; // keep channel open for async response
-  }
-});
-
-// popup.js → background.js - Fetch character data from osu!idle api
-chrome.runtime.sendMessage(
-  { type: 'FETCH_CHARACTER_DATA', characterId },
-  callback,
+```typescript
+// popup → content: extract score data from the result page DOM
+chrome.tabs.sendMessage(
+  tabId,
+  { name: 'EXTRACT_SCORE_DATA', data: {} },
+  (response: ContentExtractScoreDataResponse) => { ... }
 );
 
-// background.js listener
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message.type === 'FETCH_CHARACTER_DATA') {
-    fetchAndStoreCharacterData(message.characterId)
-      .then((data) => sendResponse({ success: true, ...data }))
-      .catch((error) => sendResponse({ success: false, error: error.message }));
-
-    return true;
+// content listener
+chrome.runtime.onMessage.addListener((query: ContentQuery, _sender, sendResponse) => {
+  switch (query.name) {
+    case 'EXTRACT_SCORE_DATA':
+      handleExtractScoreData(query.data, sendResponse);
+      return true; // keep channel open for async response
   }
 });
 
-// popup.js → background.js - Copy arbitrary data to clipboard
-chrome.runtime.sendMessage({ type: 'COPY_TO_CLIPBOARD', text }, callback);
+// popup → background: fetch character data from osu!idle API
+chrome.runtime.sendMessage(
+  { name: 'FETCH_CHARACTER', data: { id: characterId } },
+  (response: BackgroundGetCharacterResponse) => { ... }
+);
+
+// popup → background (fallback): copy text to clipboard via scripting API
+chrome.runtime.sendMessage(
+  { name: 'COPY_TO_CLIPBOARD', data: { content: text } },
+  (response: BackgroundCopyToClipboardResponse) => { ... }
+);
 ```
+
+### Message Name Constants
+
+| **Constant**                        | **Value**              | **Direction**      |
+| ----------------------------------- | ---------------------- | ------------------ |
+| `ContentQueries.ExtractScoreData`   | `'EXTRACT_SCORE_DATA'` | popup → content    |
+| `BackgroundQueries.FetchCharacter`  | `'FETCH_CHARACTER'`    | popup → background |
+| `BackgroundQueries.CopyToClipboard` | `'COPY_TO_CLIPBOARD'`  | popup → background |
 
 ## IndexedDB Schema
 
-The extension accesses the `beatmaps` database created by the osu.idle site (not by this extension).
+The extension accesses the `beatmaps` database created by the osu!idle site (not by this extension).
 
-| **Store** | **Key**                          | **Value**                                                                              |
-| --------- | -------------------------------- | -------------------------------------------------------------------------------------- |
-| `meta`    | auto-increment (cursor iterated) | `{ id, artist, title, versions: [{ version, total_length, difficulty, background }] }` |
-| `files`   | `"{beatmapSetId}/{filename}"`    | Raw `Blob` (background image)                                                          |
+| **Store** | **Key**                          | **Value**                                                                      |
+| --------- | -------------------------------- | ------------------------------------------------------------------------------ |
+| `meta`    | auto-increment (cursor iterated) | `{ id, artist, title, versions: [{ id, version, total_length, difficulty }] }` |
+| `files`   | `"{beatmapSetId}/{filename}"`    | Raw `Blob` (background image — matched by image extension regex)               |
 
-A single DB connection is opened per extraction and reused for both store queries.
+A single DB connection is opened per extraction and reused for both store queries. The connection is explicitly closed before resolving.
 
 ## chrome.storage.local Schema
 
-Character profile data is cached in `chrome.storage.local` by `background.js` after each successful API fetch:
+| **Key**     | **Type**            | **Description**                                                                                              |
+| ----------- | ------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `character` | `Character`         | Cached character profile (see `Character` type in `shared/types/data.type.ts`)                               |
+| `scores`    | `[number, Score][]` | Serialized `Map<beatmapId, Score>` — scores are keyed by beatmap difficulty ID and persisted across sessions |
 
-| **Key**              | **Type**                                                           | **Description**                           |
-| -------------------- | ------------------------------------------------------------------ | ----------------------------------------- |
-| `characterId`        | `number`                                                           | The user-configured osu!idle character ID |
-| `characterName`      | `string`                                                           | In-game character name                    |
-| `characterAvatarUrl` | `string`                                                           | URL to the character's osu! avatar        |
-| `globalLevel`        | `number`                                                           | Overall character level                   |
-| `skills`             | `Array<{ name, xp, xpToNext, level }>` (11 entries, one per skill) | Per-skill XP progress and level           |
+### `Character` shape
 
-`popup.js` reads this cache on startup to display the profile immediately before the API response arrives.
+```typescript
+interface Character {
+  avatarUrl: string;
+  globalLevel: number;
+  id: number;
+  name: string;
+  skills: Array<{
+    name: SkillName;
+    level: number;
+    xp: {
+      inCurrentLevel: number;
+      remainingToNextLevel: number;
+      toNextLevel: number;
+      total: number;
+    };
+  }>;
+}
+```
 
 ## osu!idle Character API
 
-`background.js` fetches character data from:
+`background/handlers/fetchCharacter.handler.ts` fetches character data from:
 
 ```
-GET https://api.osu.idle.rhythmgamers.net/v1/characters/{characterId}
+GET https://api.osu.idle.rhythmgamers.net/v1/characters/{id}
 ```
 
-The response is mapped to the internal skill format by `mapApiResponseToCharacterSkills()`, which reads fields like `accuracyXp`, `accuracyTotalXp`, `accuracyLevel` for each of the 11 skills.
+The response is mapped to the internal `Character` type by `mapApiResponseToCharacterData()`, using the `API_CHARACTER_SKILL_KEYS` mapping from `shared/constants/api.constants.ts`. Each skill is mapped from flat API fields (`{key}Xp`, `{key}TotalXp`, `{key}Level`) to the structured `Skill` type, with `toNextLevel` computed via `computeLevelXp()`.
 
 ## Data Flow
 
 ### Score Extraction
 
-1. User visits osu.idle result page
-2. User clicks "Extract" button in popup
-3. Popup sends `EXTRACT_DATA` message to content script
-4. Content script:
-   - Extracts song metadata (artist-title, version) from DOM using selectors (`.result__title`, `.result__version`)
-   - Extracts skill XP data from `.result__progression` container
-   - Opens IndexedDB `beatmaps` database (single connection)
-   - Queries `meta` store for matching beatmap record using cursor iteration on `"${artist} - ${title}"`
-   - Queries `files` store for background image blob using `IDBKeyRange.bound()` with beatmap set ID as key prefix
-   - Converts background blob to base64 data URL using FileReader
-   - Returns all extracted data to popup
-5. Popup displays beatmap card with background image, skill cards grid, and total XP
-6. Formatted tab-separated data is auto-copied to clipboard
+1. User visits the osu!idle result page
+2. User clicks **Extract** in the popup
+3. Popup (`useScoreExtractor` composable) sends `EXTRACT_SCORE_DATA` to the content script
+4. Content script (`extractScoreData.handler.ts`):
+   - Extracts artist + title from `.result__title` text nodes (excluding the child `.result__version` element)
+   - Extracts difficulty from `.result__version` (strips surrounding `[` `]`)
+   - Opens IndexedDB `beatmaps` database and iterates the `meta` store cursor to find the matching record by artist-title string and difficulty version
+   - Scans the `files` store with `IDBKeyRange.bound()` for a background image file (matched by image extension regex)
+   - Converts the background `Blob` to a base64 data URL via `FileReader`
+   - Extracts per-skill XP from `.result__progression > .skillxp__row` elements
+   - Computes XP per second for each skill and globally
+   - Builds the tab-separated exportable string
+   - Persists the score to `chrome.storage.local` (keyed by beatmap difficulty ID in a serialized Map)
+   - Returns the full `Score` object to the popup
+5. Popup updates `score` reactive state and re-renders beatmap card + skill cards grid
+6. On next popup open, `init()` loads the most recent score from `chrome.storage.local` for instant display
 
-### Character Profile (Settings View)
+### Character Profile (Settings Tab)
 
-1. On popup open, `popup.js` reads cached profile from `chrome.storage.local` and renders it immediately
-2. `popup.js` sends `FETCH_CHARACTER_DATA` (with the stored character ID) to `background.js`
-3. `background.js` fetches from the osu!idle character API, maps the response, stores it in `chrome.storage.local`, and sends the data back
-4. `popup.js` updates the character card (avatar, name, global level) and re-renders per-skill progress bars
-5. When the user edits the character ID input and blurs/presses Enter, steps 2–4 repeat with the new ID
+1. On Settings tab mount, `useCharacter.init()` reads cached `character` from `chrome.storage.local` and renders it immediately
+2. User triggers a refresh (or enters a new character ID) — `fetchCharacter(id)` sends `FETCH_CHARACTER` to `background.js`
+3. Background fetches from the osu!idle API, maps the response, stores the result in `chrome.storage.local`, and returns the `Character` object
+4. Settings tab updates the character card (avatar, name, level) and re-renders all per-skill progress bars
+5. When the user edits the character ID in the `CharacterCard` component and blurs/presses Enter, steps 2–4 repeat with the new ID
