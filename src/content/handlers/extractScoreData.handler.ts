@@ -1,6 +1,6 @@
 import { OsuIdleIndexedDbDatabases } from '#/shared/constants/api.constants.ts';
 import { SKILL_ORDER } from '#/shared/constants/data.constants.ts';
-import { TimeUnits } from '#/shared/constants/maths.constants.ts';
+import { StandardUnitMultipliers, TimeUnits } from '#/shared/constants/maths.constants.ts';
 import { convertBlobToDataUrl } from '#/shared/methods/internal.methods.ts';
 import { convertDuration, unitsPerSecond } from '#/shared/methods/maths.methods.ts';
 import { Beatmap, Score, ScoreSkill, ScoresMap } from '#/shared/types/data.type.ts';
@@ -9,6 +9,7 @@ import {
   IndexedDbBeatmapMetadata,
   LocalStorageData,
 } from '#/shared/types/internal.types.ts';
+import { StandardUnitMultiplierKey } from '#/shared/types/maths.types.ts';
 
 const getBeatmapMetadataFromIndexedDB = async (options: {
   artistAndTitle: string;
@@ -147,6 +148,23 @@ const extractBeatmapData = async (): Promise<Beatmap> => {
   };
 };
 
+const parseXpValue = (raw: string): number => {
+  const xpValueString = raw.trim().toLowerCase().replace(/xp$/, '').trim();
+  const optionalMultiplierCharacter = xpValueString
+    .at(-1)
+    ?.toLowerCase() as StandardUnitMultiplierKey;
+  const multiplier = StandardUnitMultipliers[optionalMultiplierCharacter] ?? 1;
+  const numeric = Number.parseFloat(
+    multiplier !== undefined ? xpValueString.slice(0, -1) : xpValueString
+  );
+
+  if (Number.isNaN(numeric)) {
+    return 0;
+  }
+
+  return Math.round(numeric * multiplier);
+};
+
 const extractSkillsData = (options: { beatmapDuration: number }): ScoreSkill[] => {
   const { beatmapDuration } = options;
   const skills: ScoreSkill[] = SKILL_ORDER.map((name) => {
@@ -179,10 +197,7 @@ const extractSkillsData = (options: { beatmapDuration: number }): ScoreSkill[] =
       return;
     }
 
-    const absoluteXpGain = Number.parseInt(
-      absoluteXpGainElement.textContent.trim().replace(/[^\d]/g, ''),
-      10
-    );
+    const absoluteXpGain = parseXpValue(absoluteXpGainElement.textContent.trim());
 
     skillToUpdate.xp = {
       absolute: absoluteXpGain,
