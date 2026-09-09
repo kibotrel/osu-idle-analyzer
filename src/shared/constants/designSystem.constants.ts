@@ -24,9 +24,12 @@ export const HeadlineVariants = {
 export const Icons = {
   ArrowPath: 'ArrowPath',
   ArrowUpOnSquareStack: 'ArrowUpOnSquareStack',
+  BarsArrowDown: 'BarsArrowDown',
   Bolt: 'Bolt',
   Calculator: 'Calculator',
   Check: 'Check',
+  ChevronDoubleLeft: 'ChevronDoubleLeft',
+  ChevronDoubleRight: 'ChevronDoubleRight',
   ClipboardDocument: 'ClipboardDocument',
   ClipboardDocumentCheck: 'ClipboardDocumentCheck',
   Cpu: 'Cpu',
