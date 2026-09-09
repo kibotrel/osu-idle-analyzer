@@ -29,7 +29,7 @@
         <template #icon>
           <Icon :icon="Icons.Bolt" />
         </template>
-        Extract score
+        Extract
       </Button>
       <Button
         :isLoading
