@@ -56,11 +56,11 @@ const selectTab = (value: string) => {
 }
 
 .tab-list-icon {
-  @apply size-6;
+  @apply size-5;
 }
 
 .tab {
-  @apply -mb-0.5 flex flex-row items-center space-x-2 px-4 py-2;
+  @apply -mb-0.5 flex flex-row items-center space-x-1 px-4 py-2;
 }
 
 .tab--selected {
