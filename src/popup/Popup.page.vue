@@ -1,18 +1,15 @@
 <template>
   <div class="popup-container">
-    <div class="popup-header">
-      <img src="/32.png" />
-      <Headline>Toolbox</Headline>
-    </div>
-    <Tablist :tabs v-model="tab" class="mb-2" />
-    <div v-if="tab === TabNames.Extractor">
-      <ScoreExtractorTab />
-    </div>
-    <div v-else-if="tab === TabNames.Simulator">
-      <Body class="italic text-primary-2">Work in progress...</Body>
-    </div>
-    <div v-else-if="tab == TabNames.Settings">
-      <SettingsTab />
+    <div class="popup-body">
+      <Sidebar id="navigation-sidebar" :tabs v-model="tab" />
+      <div class="popup-content">
+        <div v-if="tab === TabNames.Extractor">
+          <ScoreExtractorTab />
+        </div>
+        <div v-else-if="tab == TabNames.Settings">
+          <SettingsTab />
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -20,9 +17,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 
-import Body from '#/shared/components/base/Body.base.vue';
-import Headline from '#/shared/components/base/Headline.base.vue';
-import Tablist from '#/shared/components/base/TabList.base.vue';
+import Sidebar from '#/shared/components/base/Sidebar.base.vue';
 import { Icons } from '#/shared/constants/designSystem.constants.ts';
 import { Tab } from '#/shared/types/designSystem.types.ts';
 
@@ -40,14 +35,9 @@ type TabName = (typeof TabNames)[keyof typeof TabNames];
 const tab = ref<TabName>(TabNames.Extractor);
 const tabs: Tab<TabName>[] = [
   {
-    label: 'Extractor',
+    label: 'Score extractor',
     value: TabNames.Extractor,
-    icon: Icons.Calculator,
-  },
-  {
-    label: 'Simulator',
-    value: TabNames.Simulator,
-    icon: Icons.Cpu,
+    icon: Icons.BarsArrowDown,
   },
   {
     label: 'Settings',
@@ -61,10 +51,18 @@ const tabs: Tab<TabName>[] = [
 @reference '#/assets/style.css';
 
 .popup-container {
-  @apply w-lg m-4;
+  @apply w-lg;
 }
 
-.popup-header {
-  @apply flex flex-row justify-center items-center gap-2;
+.popup-body {
+  @apply flex flex-row items-stretch overflow-visible;
+}
+
+.popup-logo {
+  @apply flex flex-row items-center gap-2 overflow-hidden px-2 py-2;
+}
+
+.popup-content {
+  @apply flex-1 min-w-0 m-4;
 }
 </style>
