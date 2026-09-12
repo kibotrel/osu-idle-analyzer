@@ -1,4 +1,4 @@
-# osu!idle Score Extractor
+# osu!idle Analyzer
 
 [![License](https://img.shields.io/github/license/kibotrel/osu-idle-score-extractor)](./LICENSE)
 ![GitHub contributors](https://img.shields.io/github/contributors/kibotrel/osu-idle-score-extractor)
