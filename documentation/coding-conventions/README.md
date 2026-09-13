@@ -83,26 +83,53 @@ export const useScoreExtractor = () => {
 
 ---
 
+## XP Value Parsing
+
+osu!idle displays XP gains with unit suffixes (`k`, `m`, `b`) and a trailing `xp` label (e.g. `"1.5k xp"`, `"300 xp"`). The `parseXpValue()` function in `extractScoreData.handler.ts` normalises these into plain integers:
+
+1. Strip the trailing `xp` suffix (case-insensitive)
+2. Read the last character as an optional multiplier key
+3. Look up the multiplier in `StandardUnitMultipliers` from `shared/constants/maths.constants.ts`
+4. Parse the numeric part with `parseFloat` and multiply
+
+```typescript
+// StandardUnitMultipliers
+const StandardUnitMultipliers = {
+  k: 1e3,
+  m: 1e6,
+  b: 1e9,
+} as const;
+
+// Examples
+parseXpValue('300 xp'); // → 300
+parseXpValue('1.5k xp'); // → 1500
+parseXpValue('2.3m xp'); // → 2300000
+```
+
+If the string does not parse to a valid number, `parseXpValue()` returns `0` rather than `NaN`.
+
+---
+
 ## Naming Patterns
 
-| **What**               | **Pattern**             | **Example**                                                           |
-| ---------------------- | ----------------------- | --------------------------------------------------------------------- |
-| Handler functions      | `handle{Action}()`      | `handleExtractScoreData()`, `handleFetchCharacterData()`              |
-| Extraction functions   | `extract{Thing}()`      | `extractBeatmapData()`, `extractSkillsData()`                         |
-| Query functions        | `query{Thing}()`        | `getBeatmapMetadataFromIndexedDB()`                                   |
-| Format functions       | `format{Format}()`      | `formatExportableData()`                                              |
-| Vue composables        | `use{Feature}()`        | `useScoreExtractor()`, `useCharacter()`                               |
-| Vue page components    | `{Name}.page.vue`       | `Popup.page.vue`                                                      |
-| Vue tab components     | `{Name}.tab.vue`        | `ScoreExtractor.tab.vue`, `Settings.tab.vue`                          |
-| Vue feature components | `{Name}.component.vue`  | `BeatmapCard.component.vue`, `ScoreSkillCard.component.vue`           |
-| Vue base components    | `{Name}.base.vue`       | `Button.base.vue`, `Input.base.vue`                                   |
-| Vue icon components    | `{Name}.icon.vue`       | `Bolt.icon.vue`, `Gear.icon.vue`                                      |
-| Composable files       | `{name}.composable.ts`  | `useScoreExtractor.composable.ts`                                     |
-| Constant files         | `{domain}.constants.ts` | `api.constants.ts`, `data.constants.ts`                               |
-| Type files             | `{domain}.types.ts`     | `internal.types.ts`, `data.type.ts`                                   |
-| Method files           | `{domain}.methods.ts`   | `maths.methods.ts`, `gameplay.methods.ts`                             |
-| Message type strings   | SCREAMING_SNAKE_CASE    | `'EXTRACT_SCORE_DATA'`, `'FETCH_CHARACTER'`, `'COPY_TO_CLIPBOARD'`    |
-| Constant object keys   | PascalCase              | `ContentQueries.ExtractScoreData`, `BackgroundQueries.FetchCharacter` |
+| **What**               | **Pattern**             | **Example**                                                                                                                                                                                          |
+| ---------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Handler functions      | `handle{Action}()`      | `handleExtractScoreData()`, `handleFetchCharacterData()`                                                                                                                                             |
+| Extraction functions   | `extract{Thing}()`      | `extractBeatmapData()`, `extractSkillsData()`                                                                                                                                                        |
+| Query functions        | `query{Thing}()`        | `getBeatmapMetadataFromIndexedDB()`                                                                                                                                                                  |
+| Format functions       | `format{Format}()`      | `formatExportableData()`                                                                                                                                                                             |
+| Vue composables        | `use{Feature}()`        | `useScoreExtractor()`, `useCharacter()`                                                                                                                                                              |
+| Vue page components    | `{Name}.page.vue`       | `Popup.page.vue`                                                                                                                                                                                     |
+| Vue tab components     | `{Name}.tab.vue`        | `ScoreExtractor.tab.vue`, `Settings.tab.vue`                                                                                                                                                         |
+| Vue feature components | `{Name}.component.vue`  | `BeatmapCard.component.vue`, `ScoreSkillCard.component.vue`                                                                                                                                          |
+| Vue base components    | `{Name}.base.vue`       | `Body.base.vue`, `Button.base.vue`, `Caption.base.vue`, `Headline.base.vue`, `Icon.base.vue`, `Input.base.vue`, `ProgressBar.base.vue`, `Separator.base.vue`, `Sidebar.base.vue`, `TabList.base.vue` |
+| Vue icon components    | `{Name}.icon.vue`       | `Bolt.icon.vue`, `Gear.icon.vue`                                                                                                                                                                     |
+| Composable files       | `{name}.composable.ts`  | `useScoreExtractor.composable.ts`                                                                                                                                                                    |
+| Constant files         | `{domain}.constants.ts` | `api.constants.ts`, `data.constants.ts`                                                                                                                                                              |
+| Type files             | `{domain}.types.ts`     | `internal.types.ts`, `data.type.ts`                                                                                                                                                                  |
+| Method files           | `{domain}.methods.ts`   | `maths.methods.ts`, `gameplay.methods.ts`                                                                                                                                                            |
+| Message type strings   | SCREAMING_SNAKE_CASE    | `'EXTRACT_SCORE_DATA'`, `'FETCH_CHARACTER'`, `'COPY_TO_CLIPBOARD'`                                                                                                                                   |
+| Constant object keys   | PascalCase              | `ContentQueries.ExtractScoreData`, `BackgroundQueries.FetchCharacter`                                                                                                                                |
 
 ---
 
@@ -153,6 +180,21 @@ Component-level styles use `<style scoped>` with `@reference '#/assets/style.css
   }
 </style>
 ```
+
+### Design system constants
+
+Component variants and icon names are driven by typed constants in `shared/constants/designSystem.constants.ts`. Always use these constants rather than raw strings when passing props to base components.
+
+| **Constant**        | **Used by**          | **Available values**                                             |
+| ------------------- | -------------------- | ---------------------------------------------------------------- |
+| `BodyVariants`      | `Body.base.vue`      | `Base`, `Small`                                                  |
+| `ButtonVariants`    | `Button.base.vue`    | `Danger`, `Ghost`, `Primary`, `Secondary`, `Success`, `Warning`  |
+| `CaptionVariants`   | `Caption.base.vue`   | `Base`                                                           |
+| `HeadlineVariants`  | `Headline.base.vue`  | `Subtitle`, `Title`                                              |
+| `Icons`             | `Icon.base.vue`      | `ArrowPath`, `Bolt`, `Gear`, `Loading`, `PencilSquare`, and more |
+| `InputTypes`        | `Input.base.vue`     | `Number`, `Text`                                                 |
+| `InputVariants`     | `Input.base.vue`     | `Ghost`, `Primary`                                               |
+| `SeparatorVariants` | `Separator.base.vue` | `Dashed`, `Primary`                                              |
 
 ### Layout conventions
 

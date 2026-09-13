@@ -6,7 +6,7 @@
 A browser extension (Chrome & Firefox) that extracts XP statistics from osu!idle game result screens and exports them for analysis and tracking.
 
 <div align="center">
-  <img width="412" height="543" alt="extension user interface" src="https://github.com/user-attachments/assets/31561498-28d1-4306-8a1d-16a08f4e82f2" />
+  <img width="519" height="371" alt="image" src="https://github.com/user-attachments/assets/41efec36-8df6-441f-9674-43fcfcd75aaa" />
 </div>
 
 ## 🎯 Extension Capabilities
@@ -61,14 +61,17 @@ See [Installation & Setup](./documentation/installation/README.md) for detailed 
 
 ```
 ├── src/
-│   ├── background/             # Service worker — API fetch + clipboard fallback
-│   ├── content/                # Content script — DOM extraction + IndexedDB queries
-│   ├── popup/                  # Vue 3 popup UI (tabs: Score Extractor, Settings)
-│   ├── shared/                 # Types, constants, methods, and components shared across contexts
-│   └── assets/style.css        # Global Tailwind v4 stylesheet + color tokens
+│   ├── background/             # Service worker: message routing, API fetching, clipboard fallback
+│   ├── content/                # Content script: DOM extraction, IndexedDB queries
+│   ├── popup/                  # Vue 3 popup UI with tab-based navigation (Score Extractor, Settings)
+│   ├── shared/                 # Shared types, constants, methods, and reusable Vue components
+│   └── assets/                 # Global Tailwind v4 stylesheet + custom design tokens
 ├── public/                     # Extension icons (16, 32, 48, 128 px)
-├── manifest.config.ts          # Browser-agnostic MV3 manifest (read by Vite)
-├── vite.config.ts              # Vite + crxjs + Vue + Tailwind build config
+├── documentation/              # Architecture guides, coding conventions, installation instructions
+├── dist/                       # Build output (uncompressed extension for dev loading)
+├── release/                    # Distributable .zip archives for stores
+├── manifest.config.ts          # Browser-agnostic MV3 manifest (read by Vite plugin)
+├── vite.config.ts              # Vite + crxjs + Vue + Tailwind build configuration
 └── package.json                # pnpm project manifest
 ```
 

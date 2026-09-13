@@ -29,9 +29,11 @@ osu-idle-score-extractor/
 │   │       ├── score-extractor/   # Score Extractor tab (components + composable)
 │   │       └── settings/          # Settings tab (components + composable)
 │   └── shared/
-│       ├── components/            # Reusable base UI components (Vue) + icon components
-│       ├── constants/             # Typed constant objects (API, data, design system, etc.)
-│       ├── methods/               # Pure utility functions (gameplay, math, internal)
+│       ├── components/
+│       │   ├── base/              # Base UI components: Body, Button, Caption, Headline, Icon, Input, ProgressBar, Separator, Sidebar, TabList
+│       │   └── icons/             # SVG icon components (ArrowPath, Bolt, Gear, Loading, etc.)
+│       ├── constants/             # Typed constant objects (API, data, design system, maths, internal)
+│       ├── methods/               # Pure utility functions (gameplay, maths, internal)
 │       └── types/                 # TypeScript interfaces and type aliases
 ├── public/                        # Static extension icons (16, 32, 48, 128 px)
 ├── dist/                          # Vite build output (loaded unpacked during development)
@@ -62,30 +64,35 @@ All cross-context communication uses MV3 `chrome.runtime` messaging. Messages fo
 
 ```typescript
 // popup → content: extract score data from the result page DOM
-chrome.tabs.sendMessage(
-  tabId,
-  { name: 'EXTRACT_SCORE_DATA', data: {} },
+chrome.tabs.sendMessage<ContentExtractScoreDataQuery>(
+  activeTab.id,
+  { name: ContentQueries.ExtractScoreData, data: {} as Record<string, never> },
   (response: ContentExtractScoreDataResponse) => { ... }
 );
 
 // content listener
-chrome.runtime.onMessage.addListener((query: ContentQuery, _sender, sendResponse) => {
-  switch (query.name) {
-    case 'EXTRACT_SCORE_DATA':
-      handleExtractScoreData(query.data, sendResponse);
-      return true; // keep channel open for async response
+chrome.runtime.onMessage.addListener(
+  (query: ContentQuery, _sender, sendResponse: (response: unknown) => void) => {
+    const { data, name } = query;
+
+    switch (name) {
+      case ContentQueries.ExtractScoreData: {
+        return handleExtractScoreData(data, sendResponse);
+        // handler calls sendResponse asynchronously; return propagates implicit true
+      }
+    }
   }
-});
+);
 
 // popup → background: fetch character data from osu!idle API
-chrome.runtime.sendMessage(
-  { name: 'FETCH_CHARACTER', data: { id: characterId } },
+chrome.runtime.sendMessage<BackgroundGetCharacterQuery>(
+  { name: BackgroundQueries.FetchCharacter, data: { id: characterId } },
   (response: BackgroundGetCharacterResponse) => { ... }
 );
 
 // popup → background (fallback): copy text to clipboard via scripting API
-chrome.runtime.sendMessage(
-  { name: 'COPY_TO_CLIPBOARD', data: { content: text } },
+chrome.runtime.sendMessage<BackgroundCopyToClipboardQuery, BackgroundCopyToClipboardResponse>(
+  { name: BackgroundQueries.CopyToClipboard, data: { content: text } },
   (response: BackgroundCopyToClipboardResponse) => { ... }
 );
 ```
@@ -124,16 +131,47 @@ interface Character {
   globalLevel: number;
   id: number;
   name: string;
-  skills: Array<{
-    name: SkillName;
-    level: number;
-    xp: {
-      inCurrentLevel: number;
-      remainingToNextLevel: number;
-      toNextLevel: number;
-      total: number;
-    };
-  }>;
+  skills: Skill[];
+}
+
+interface Skill {
+  name: SkillName;
+  level: number;
+  xp: {
+    inCurrentLevel: number;
+    remainingToNextLevel: number;
+    toNextLevel: number;
+    total: number;
+  };
+}
+```
+
+### `Score` shape
+
+```typescript
+interface Score {
+  beatmap: Beatmap;
+  exportableData: string; // tab-separated string for clipboard export
+  gainedSkills: ScoreSkill[];
+  timestamp: number;
+}
+
+interface Beatmap {
+  artist: string;
+  backgroundUrl: string;
+  difficultyName: string;
+  durationInSeconds: number;
+  id: number;
+  starRating: number;
+  title: string;
+}
+
+interface ScoreSkill {
+  name: SkillName;
+  xp: {
+    absolute: number;
+    perSecond: number;
+  };
 }
 ```
 
@@ -155,16 +193,6 @@ The response is mapped to the internal `Character` type by `mapApiResponseToChar
 2. User clicks **Extract** in the popup
 3. Popup (`useScoreExtractor` composable) sends `EXTRACT_SCORE_DATA` to the content script
 4. Content script (`extractScoreData.handler.ts`):
-   - Extracts artist + title from `.result__title` text nodes (excluding the child `.result__version` element)
-   - Extracts difficulty from `.result__version` (strips surrounding `[` `]`)
-   - Opens IndexedDB `beatmaps` database and iterates the `meta` store cursor to find the matching record by artist-title string and difficulty version
-   - Scans the `files` store with `IDBKeyRange.bound()` for a background image file (matched by image extension regex)
-   - Converts the background `Blob` to a base64 data URL via `FileReader`
-   - Extracts per-skill XP from `.result__progression > .skillxp__row` elements
-   - Computes XP per second for each skill and globally
-   - Builds the tab-separated exportable string
-   - Persists the score to `chrome.storage.local` (keyed by beatmap difficulty ID in a serialized Map)
-   - Returns the full `Score` object to the popup
 5. Popup updates `score` reactive state and re-renders beatmap card + skill cards grid
 6. On next popup open, `init()` loads the most recent score from `chrome.storage.local` for instant display
 
