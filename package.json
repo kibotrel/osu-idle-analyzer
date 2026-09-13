@@ -1,12 +1,14 @@
 {
   "name": "osu!idle Analyzer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Get useful insights from different aspects of the game to optimize your progression.",
   "type": "module",
   "scripts": {
-    "build": "vue-tsc -b && vite build",
-    "dev": "vite",
+    "build:chrome": "vue-tsc -b && BROWSER=chrome vite build",
+    "build:firefox": "vue-tsc -b && BROWSER=firefox vite build",
+    "dev:chrome": "BROWSER=chrome vite",
+    "dev:firefox": "BROWSER=firefox vite",
     "format": "oxfmt",
     "lint": "oxlint",
     "spellcheck": "cspell --config cspell.json --no-progress --no-summary --no-show-suggestions --no-must-find-files  --gitignore ./"

@@ -5,16 +5,19 @@ import path from 'node:path';
 import { defineConfig } from 'vite';
 import zip from 'vite-plugin-zip-pack';
 
-import manifest from './manifest.config.ts';
+import { chromeManifest, firefoxManifest } from './manifest.config.ts';
 import { name, version } from './package.json';
+
+const browser = process.env.BROWSER as 'chrome' | 'firefox';
+const manifest = browser === 'firefox' ? firefoxManifest : chromeManifest;
 
 export default defineConfig({
   resolve: { alias: { '#': `${path.resolve(__dirname, 'src')}` } },
   plugins: [
     vue(),
     tailwindcss(),
-    crx({ manifest }),
-    zip({ outDir: 'release', outFileName: `${name}-${version}.zip` }),
+    crx({ manifest, browser }),
+    zip({ outDir: 'release', outFileName: `${name}-${version}-${browser}.zip` }),
   ],
-  server: { cors: { origin: [/chrome-extension:\/\//] } },
+  server: { cors: { origin: [/chrome-extension:\/\//, /moz-extension:\/\//] } },
 });

@@ -1,6 +1,8 @@
 beatmap
 Beatmap
 beatmaps
+demonwaves
+firefox
 geist
 jackspeed
 kibotrel

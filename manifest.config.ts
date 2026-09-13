@@ -2,7 +2,7 @@ import { defineManifest } from '@crxjs/vite-plugin';
 
 import { description, name, version } from './package.json';
 
-export default defineManifest({
+const sharedFields = {
   action: {
     default_icon: {
       16: 'public/16.png',
@@ -11,10 +11,6 @@ export default defineManifest({
       128: 'public/128.png',
     },
     default_popup: 'src/popup/index.html',
-  },
-  background: {
-    service_worker: 'src/background/main.ts',
-    type: 'module',
   },
   content_scripts: [
     {
@@ -35,8 +31,27 @@ export default defineManifest({
     48: 'public/48.png',
     128: 'public/128.png',
   },
-  manifest_version: 3,
+  manifest_version: 3 as const,
   name,
-  permissions: ['activeTab', 'clipboardWrite', 'scripting', 'storage', 'unlimitedStorage'],
   version,
+};
+
+export const chromeManifest = defineManifest({
+  ...sharedFields,
+  background: {
+    service_worker: 'src/background/main.ts',
+    type: 'module',
+  },
+  permissions: ['activeTab', 'clipboardWrite', 'scripting', 'storage', 'unlimitedStorage'],
+});
+
+export const firefoxManifest = defineManifest({
+  ...sharedFields,
+  background: {
+    scripts: ['src/background/main.ts'],
+  },
+  permissions: ['activeTab', 'scripting', 'storage'],
+  browser_specific_settings: {
+    gecko: { id: 'osu-idle-score-extractor@demonwaves' },
+  },
 });
